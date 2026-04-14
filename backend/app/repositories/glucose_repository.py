@@ -1,14 +1,18 @@
-"""Repository for glucose-related persistence.
+"""Repository for glucose data.
 
-Handles patient/device upsert and measurement insertion.
-Uses PostgreSQL ON CONFLICT for safe concurrent access.
+GlucoseRepository class: MQTT ingestion (owns session factory).
+Module-level functions: API read queries (accept session parameter).
 """
 
 import logging
+from collections.abc import Sequence
+from datetime import datetime
+from typing import Literal
 
-from sqlalchemy import func, select
+from sqlalchemy import Row, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import selectinload
 
 from app.models.device import Device
 from app.models.glucose_measurement import GlucoseMeasurement
@@ -70,3 +74,63 @@ class GlucoseRepository:
             select(Device.id).where(Device.device_id == device_id)
         )
         return result.scalar_one()
+
+
+# ── API read queries ──────────────────────────────
+
+
+async def get_latest_by_patient(
+    session: AsyncSession,
+    patient_pk: int,
+) -> GlucoseMeasurement | None:
+    result = await session.execute(
+        select(GlucoseMeasurement)
+        .options(selectinload(GlucoseMeasurement.device))
+        .where(GlucoseMeasurement.patient_id == patient_pk)
+        .order_by(GlucoseMeasurement.timestamp.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_history_by_patient(
+    session: AsyncSession,
+    patient_pk: int,
+    limit: int = 100,
+    offset: int = 0,
+    from_ts: datetime | None = None,
+    to_ts: datetime | None = None,
+    order: Literal["asc", "desc"] = "desc",
+) -> Sequence[GlucoseMeasurement]:
+    stmt = (
+        select(GlucoseMeasurement)
+        .options(selectinload(GlucoseMeasurement.device))
+        .where(GlucoseMeasurement.patient_id == patient_pk)
+    )
+    if from_ts is not None:
+        stmt = stmt.where(GlucoseMeasurement.timestamp >= from_ts)
+    if to_ts is not None:
+        stmt = stmt.where(GlucoseMeasurement.timestamp <= to_ts)
+
+    order_col = (
+        GlucoseMeasurement.timestamp.asc()
+        if order == "asc"
+        else GlucoseMeasurement.timestamp.desc()
+    )
+    stmt = stmt.order_by(order_col).offset(offset).limit(limit)
+
+    result = await session.execute(stmt)
+    return result.scalars().all()
+
+
+async def get_stats_by_patient(session: AsyncSession, patient_pk: int) -> Row:
+    result = await session.execute(
+        select(
+            func.count().label("count"),
+            func.min(GlucoseMeasurement.glucose_mg_dl).label("min_glucose"),
+            func.max(GlucoseMeasurement.glucose_mg_dl).label("max_glucose"),
+            func.round(func.avg(GlucoseMeasurement.glucose_mg_dl), 2).label("avg_glucose"),
+            func.max(GlucoseMeasurement.timestamp).label("latest_timestamp"),
+        ).where(GlucoseMeasurement.patient_id == patient_pk)
+    )
+    return result.one()

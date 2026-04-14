@@ -1,9 +1,15 @@
-"""Pydantic schema for validating incoming CGM glucose readings."""
+"""Pydantic schemas for glucose data.
+
+GlucoseReading: MQTT input validation.
+GlucoseMeasurementResponse / GlucoseStatsResponse / GlucoseHistoryResponse: API output.
+"""
 
 from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+
+# ── MQTT input ────────────────────────────────────
 
 class GlucoseReading(BaseModel):
     """Validated glucose measurement received from MQTT."""
@@ -22,3 +28,31 @@ class GlucoseReading(BaseModel):
         if v not in allowed:
             raise ValueError(f"unit must be one of {allowed}, got '{v}'")
         return v
+
+
+# ── API responses ─────────────────────────────────
+
+class GlucoseMeasurementResponse(BaseModel):
+    id: int
+    patient_id: str
+    device_id: str
+    timestamp: datetime
+    glucose_mg_dl: float
+    unit: str
+    sequence_number: int
+    created_at: datetime
+
+
+class GlucoseStatsResponse(BaseModel):
+    patient_id: str
+    count: int
+    min_glucose: float | None
+    max_glucose: float | None
+    avg_glucose: float | None
+    latest_timestamp: datetime | None
+
+
+class GlucoseHistoryResponse(BaseModel):
+    patient_id: str
+    count: int
+    measurements: list[GlucoseMeasurementResponse]

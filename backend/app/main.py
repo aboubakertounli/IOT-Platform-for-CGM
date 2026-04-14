@@ -4,6 +4,7 @@ CGM IoT Platform — FastAPI Application Entry Point.
 Phase 1: Infrastructure foundation.
 Phase 3: MQTT consumer integration.
 Phase 4: PostgreSQL persistence.
+Phase 5: REST API for data consultation.
 """
 
 import logging
@@ -15,6 +16,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.db.database import init_db, close_db
 from app.api.health import router as health_router
+from app.api.routers.patients import router as patients_router
+from app.api.routers.glucose import router as glucose_router
+from app.api.routers.devices import router as devices_router
 from app.mqtt.client import MqttConsumer
 
 import app.models  # noqa: F401 — register ORM models with Base.metadata
@@ -78,6 +82,9 @@ app.add_middleware(
 
 # ── Routers ────────────────────────────────────────
 app.include_router(health_router)
+app.include_router(patients_router)
+app.include_router(glucose_router)
+app.include_router(devices_router)
 
 
 # ── Root endpoint ──────────────────────────────────
