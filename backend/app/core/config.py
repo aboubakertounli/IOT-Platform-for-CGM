@@ -36,6 +36,21 @@ class Settings(BaseSettings):
     MQTT_QOS: int = 1
     MQTT_KEEPALIVE: int = 60
 
+    # ── Analysis ──────────────────────────────────
+    GLUCOSE_HYPO_CRITICAL: float = 54.0
+    GLUCOSE_HYPO_WARNING: float = 70.0
+    GLUCOSE_HYPER_WARNING: float = 180.0
+    GLUCOSE_HYPER_CRITICAL: float = 250.0
+    GLUCOSE_TREND_RATE_WARNING: float = 3.0
+
+    ANALYSIS_TREND_WINDOW_MINUTES: int = 15
+    ANALYSIS_TREND_MIN_POINTS: int = 3
+    ANALYSIS_ANOMALY_WINDOW_HOURS: int = 24
+    ANALYSIS_ANOMALY_Z_THRESHOLD: float = 3.0
+    ANALYSIS_ANOMALY_MIN_POINTS: int = 10
+
+    ALERT_DEDUP_MINUTES: int = 15
+
     # ── Security ───────────────────────────────────
     JWT_SECRET: str = "change-me"
     JWT_ALGORITHM: str = "HS256"

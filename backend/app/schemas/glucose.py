@@ -40,6 +40,11 @@ class GlucoseMeasurementResponse(BaseModel):
     glucose_mg_dl: float
     unit: str
     sequence_number: int
+    classification: str | None = None
+    trend_direction: str | None = None
+    trend_rate: float | None = None
+    is_anomaly: bool | None = None
+    anomaly_score: float | None = None
     created_at: datetime
 
 
