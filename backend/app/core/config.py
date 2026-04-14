@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     # ── MQTT ───────────────────────────────────────
     MQTT_BROKER_HOST: str = "mosquitto"
     MQTT_BROKER_PORT: int = 1883
+    MQTT_CLIENT_ID: str = "cgm-backend"
+    MQTT_QOS: int = 1
+    MQTT_KEEPALIVE: int = 60
 
     # ── Security ───────────────────────────────────
     JWT_SECRET: str = "change-me"

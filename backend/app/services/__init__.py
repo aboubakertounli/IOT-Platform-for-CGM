@@ -1,1 +1,1 @@
-# Business logic services will be defined here in Phase 2
+from app.services.ingestion_service import ingestion_service  # noqa: F401

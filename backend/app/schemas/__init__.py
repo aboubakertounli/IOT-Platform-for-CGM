@@ -1,1 +1,1 @@
-# Pydantic schemas will be defined here in Phase 2
+from app.schemas.glucose import GlucoseReading  # noqa: F401
