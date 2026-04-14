@@ -1,0 +1,82 @@
+version: "3.8"
+
+services:
+
+  # ── MQTT Broker ──────────────────────────────────
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: cgm-mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    networks:
+      - cgm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 -i healthcheck -W 3 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── PostgreSQL Database ──────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: cgm-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cgm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── FastAPI Backend ──────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cgm-backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      MQTT_BROKER_HOST: ${MQTT_BROKER_HOST}
+      MQTT_BROKER_PORT: ${MQTT_BROKER_PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      ENV: ${ENV}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    networks:
+      - cgm-network
+    restart: unless-stopped
+    volumes:
+      - ./backend/app:/app/app
+
+networks:
+  cgm-network:
+    name: cgm-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: cgm-postgres-data
+  mosquitto_data:
+    name: cgm-mosquitto-data
+  mosquitto_log:
+    name: cgm-mosquitto-log
