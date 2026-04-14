@@ -1,0 +1,26 @@
+from datetime import datetime
+
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
+
+from app.db.database import Base
+
+
+class GlucoseMeasurement(Base):
+    __tablename__ = "glucose_measurements"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("patients.id"), index=True)
+    device_id: Mapped[int] = mapped_column(ForeignKey("devices.id"), index=True)
+    timestamp: Mapped[datetime] = mapped_column(index=True)
+    glucose_mg_dl: Mapped[float]
+    unit: Mapped[str] = mapped_column(String(10), default="mg/dL")
+    sequence_number: Mapped[int]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    patient: Mapped["Patient"] = relationship(back_populates="measurements")
+    device: Mapped["Device"] = relationship(back_populates="measurements")
+
+    def __repr__(self) -> str:
+        return f"<GlucoseMeasurement patient={self.patient_id} seq={self.sequence_number}>"

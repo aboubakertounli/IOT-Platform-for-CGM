@@ -3,6 +3,8 @@ Async database engine and session factory.
 Uses SQLAlchemy 2.0 async API with asyncpg driver.
 """
 
+import logging
+
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -12,6 +14,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import get_settings
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # ── Engine ─────────────────────────────────────────
@@ -35,6 +38,23 @@ async_session = async_sessionmaker(
 class Base(DeclarativeBase):
     """Base class for all ORM models."""
     pass
+
+
+# ── Lifecycle ──────────────────────────────────────
+async def init_db() -> None:
+    """Create all tables registered with Base.metadata.
+
+    Dev-only convenience — use Alembic migrations in production.
+    """
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("Database tables created / verified")
+
+
+async def close_db() -> None:
+    """Dispose of the connection pool."""
+    await engine.dispose()
+    logger.info("Database connection pool closed")
 
 
 # ── Dependency ─────────────────────────────────────

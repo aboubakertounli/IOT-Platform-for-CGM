@@ -4,6 +4,8 @@ All settings loaded from environment variables.
 """
 
 from functools import lru_cache
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -11,7 +13,21 @@ class Settings(BaseSettings):
     """Application settings — validated from environment variables."""
 
     # ── Database ───────────────────────────────────
-    DATABASE_URL: str
+    POSTGRES_HOST: str = "postgres"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_DB: str = "cgm_platform"
+    POSTGRES_USER: str = "cgm_user"
+    POSTGRES_PASSWORD: str = "changeme"
+    DATABASE_URL: str = ""
+
+    @model_validator(mode="after")
+    def build_database_url(self) -> "Settings":
+        if not self.DATABASE_URL:
+            self.DATABASE_URL = (
+                f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+                f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            )
+        return self
 
     # ── MQTT ───────────────────────────────────────
     MQTT_BROKER_HOST: str = "mosquitto"

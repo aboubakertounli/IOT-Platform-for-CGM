@@ -11,13 +11,12 @@ from app.services.ingestion_service import ingestion_service
 logger = logging.getLogger(__name__)
 
 # ── Topic prefix → handler mapping ────────────────
-# Each handler receives (topic: str, payload: dict).
 
 GLUCOSE_PREFIX = "cgm/glucose/"
 STATUS_PREFIX = "cgm/status/"
 
 
-def dispatch(topic: str, raw_payload: bytes) -> None:
+async def dispatch(topic: str, raw_payload: bytes) -> None:
     """Route an incoming MQTT message to the appropriate handler."""
     try:
         payload = json.loads(raw_payload)
@@ -26,14 +25,14 @@ def dispatch(topic: str, raw_payload: bytes) -> None:
         return
 
     if topic.startswith(GLUCOSE_PREFIX):
-        _handle_glucose(topic, payload)
+        await _handle_glucose(topic, payload)
     elif topic.startswith(STATUS_PREFIX):
         _handle_status(topic, payload)
     else:
         logger.warning("No handler for topic %s", topic)
 
 
-def _handle_glucose(topic: str, payload: dict) -> None:
+async def _handle_glucose(topic: str, payload: dict) -> None:
     """Validate and ingest a glucose reading."""
     try:
         reading = GlucoseReading.model_validate(payload)
@@ -41,7 +40,7 @@ def _handle_glucose(topic: str, payload: dict) -> None:
         logger.error("Invalid glucose payload on %s: %s", topic, exc)
         return
 
-    ingestion_service.ingest(reading)
+    await ingestion_service.ingest(reading)
 
 
 def _handle_status(topic: str, payload: dict) -> None:

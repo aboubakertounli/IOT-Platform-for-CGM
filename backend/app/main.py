@@ -3,6 +3,7 @@ CGM IoT Platform — FastAPI Application Entry Point.
 
 Phase 1: Infrastructure foundation.
 Phase 3: MQTT consumer integration.
+Phase 4: PostgreSQL persistence.
 """
 
 import logging
@@ -12,18 +13,20 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.db.database import engine, Base
+from app.db.database import init_db, close_db
 from app.api.health import router as health_router
 from app.mqtt.client import MqttConsumer
 
+import app.models  # noqa: F401 — register ORM models with Base.metadata
+
 settings = get_settings()
-logger = logging.getLogger(__name__)
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+logger = logging.getLogger(__name__)
 
 
 # ── Lifespan (startup / shutdown) ──────────────────
@@ -36,9 +39,7 @@ async def lifespan(app: FastAPI):
     logger.info("MQTT Broker: %s:%d", settings.MQTT_BROKER_HOST, settings.MQTT_BROKER_PORT)
 
     # Database
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    logger.info("Database tables verified")
+    await init_db()
 
     # MQTT consumer
     mqtt_consumer = MqttConsumer(
@@ -54,7 +55,7 @@ async def lifespan(app: FastAPI):
 
     # ── Shutdown ───────────────────────────────────
     mqtt_consumer.stop()
-    await engine.dispose()
+    await close_db()
     logger.info("Application shutdown complete")
 
 

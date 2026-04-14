@@ -1,5 +1,12 @@
-"""MQTT consumer — connects to Mosquitto, subscribes, and dispatches messages."""
+"""MQTT consumer — connects to Mosquitto, subscribes, and dispatches messages.
 
+Paho-mqtt runs its network loop in a background thread. Since the handler
+layer is async (it writes to the DB via async SQLAlchemy), each incoming
+message is scheduled on the main asyncio event loop with
+run_coroutine_threadsafe.
+"""
+
+import asyncio
 import logging
 import time
 
@@ -27,6 +34,7 @@ class MqttConsumer:
         self._qos = qos
         self._keepalive = keepalive
         self._connected = False
+        self._loop: asyncio.AbstractEventLoop | None = None
 
         self._client = mqtt.Client(
             client_id=client_id,
@@ -39,7 +47,13 @@ class MqttConsumer:
     # ── Lifecycle ─────────────────────────────────────
 
     def start(self) -> None:
-        """Connect to the broker and start the network loop in a background thread."""
+        """Connect to the broker and start the network loop in a background thread.
+
+        Must be called from an async context (FastAPI lifespan) so we can
+        capture the running event loop for later async dispatch.
+        """
+        self._loop = asyncio.get_running_loop()
+
         logger.info("Connecting to MQTT broker %s:%d …", self._host, self._port)
         self._client.connect(self._host, self._port, keepalive=self._keepalive)
         self._client.loop_start()
@@ -82,4 +96,17 @@ class MqttConsumer:
             logger.warning("MQTT unexpected disconnect (rc=%d) — paho will auto-reconnect", rc)
 
     def _on_message(self, client: mqtt.Client, userdata: object, msg: mqtt.MQTTMessage) -> None:
-        dispatch(msg.topic, msg.payload)
+        """Called from paho's background thread — bridges to the async event loop."""
+        if self._loop is None or self._loop.is_closed():
+            return
+
+        future = asyncio.run_coroutine_threadsafe(
+            dispatch(msg.topic, msg.payload), self._loop
+        )
+        future.add_done_callback(self._on_dispatch_done)
+
+    @staticmethod
+    def _on_dispatch_done(future: asyncio.Future) -> None:
+        exc = future.exception()
+        if exc is not None:
+            logger.error("Unhandled error in MQTT dispatch: %s", exc)
