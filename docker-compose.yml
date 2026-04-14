@@ -43,6 +43,28 @@ services:
       timeout: 3s
       retries: 5
 
+  # ── Edge Simulator ────────────────────────────────
+  edge:
+    build:
+      context: ./edge
+      dockerfile: Dockerfile
+    container_name: cgm-edge
+    environment:
+      MQTT_BROKER_HOST: mosquitto
+      MQTT_BROKER_PORT: 1883
+      EDGE_INTERVAL_SECONDS: ${EDGE_INTERVAL_SECONDS:-5}
+      EDGE_PATIENT_ID: ${EDGE_PATIENT_ID:-PAT-001}
+      EDGE_DEVICE_ID: ${EDGE_DEVICE_ID:-DEX-G6-001}
+      EDGE_CSV_PATH: ${EDGE_CSV_PATH:-data/sample.csv}
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    networks:
+      - cgm-network
+    restart: "no"
+    volumes:
+      - ./edge/data:/edge/data:ro
+
   # ── FastAPI Backend ──────────────────────────────
   backend:
     build:

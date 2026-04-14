@@ -24,3 +24,5 @@ Thumbs.db
 
 # Data
 data/*.csv
+
+.env.example
