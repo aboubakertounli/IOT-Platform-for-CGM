@@ -90,6 +90,25 @@ services:
     volumes:
       - ./backend/app:/app/app
 
+  # ── Streamlit Dashboard ─────────────────────────
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: cgm-dashboard
+    ports:
+      - "${DASHBOARD_PORT:-8501}:8501"
+    environment:
+      BACKEND_URL: http://backend:8000
+      REFRESH_INTERVAL_SECONDS: ${REFRESH_INTERVAL_SECONDS:-30}
+    depends_on:
+      - backend
+    networks:
+      - cgm-network
+    restart: unless-stopped
+    volumes:
+      - ./dashboard/app:/dashboard/app
+
 networks:
   cgm-network:
     name: cgm-network
