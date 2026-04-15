@@ -5,6 +5,7 @@ Phase 1: Infrastructure foundation.
 Phase 3: MQTT consumer integration.
 Phase 4: PostgreSQL persistence.
 Phase 5: REST API for data consultation.
+Phase 6: Analysis, alerts, and business rules.
 """
 
 import logging
@@ -19,6 +20,8 @@ from app.api.health import router as health_router
 from app.api.routers.patients import router as patients_router
 from app.api.routers.glucose import router as glucose_router
 from app.api.routers.devices import router as devices_router
+from app.api.routers.alerts import router as alerts_router
+from app.api.routers.analysis import router as analysis_router
 from app.mqtt.client import MqttConsumer
 
 import app.models  # noqa: F401 — register ORM models with Base.metadata
@@ -85,6 +88,8 @@ app.include_router(health_router)
 app.include_router(patients_router)
 app.include_router(glucose_router)
 app.include_router(devices_router)
+app.include_router(alerts_router)
+app.include_router(analysis_router)
 
 
 # ── Root endpoint ──────────────────────────────────

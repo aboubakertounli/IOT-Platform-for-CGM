@@ -25,6 +25,11 @@ def _to_response(m: GlucoseMeasurement, patient_id_str: str) -> GlucoseMeasureme
         glucose_mg_dl=m.glucose_mg_dl,
         unit=m.unit,
         sequence_number=m.sequence_number,
+        classification=m.classification,
+        trend_direction=m.trend_direction,
+        trend_rate=m.trend_rate,
+        is_anomaly=m.is_anomaly,
+        anomaly_score=m.anomaly_score,
         created_at=m.created_at,
     )
 
