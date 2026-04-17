@@ -26,4 +26,4 @@ Thumbs.db
 data/*.csv
 
 .env.example
-.claude
+.claude/*
