@@ -10,6 +10,8 @@ RUN pip install --no-cache-dir --timeout=300 -r requirements.txt
 COPY .streamlit/ .streamlit/
 COPY app/ app/
 
+ENV PYTHONPATH=/dashboard
+
 EXPOSE 8501
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \

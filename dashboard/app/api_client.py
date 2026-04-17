@@ -130,3 +130,9 @@ def acknowledge_alert(alert_id: int) -> dict | None:
 
 def get_latest_analysis(patient_id: str) -> dict | None:
     return _get(f"/api/analysis/{patient_id}/latest")
+
+
+# ── Debug ─────────────────────────────────────────────
+
+def get_debug_summary() -> dict | None:
+    return _get("/api/debug/summary")

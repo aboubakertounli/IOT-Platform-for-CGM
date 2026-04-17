@@ -1,46 +1,83 @@
-"""CGM IoT Platform — Streamlit Dashboard Entry Point."""
+"""GlucoWatch — Streamlit Dashboard Entry Point."""
 
 import time
 
 import streamlit as st
 
-from app import api_client
+from app.auth import init_auth, is_authenticated, get_role
+from app.styles import inject_global_styles
 from app.components.sidebar import render_sidebar
-from app.pages import patient_dashboard, doctor_dashboard
+
+from app.views import (
+    landing,
+    login,
+    register,
+    patient_dashboard,
+    patient_alerts,
+    doctor_dashboard,
+    doctor_patient_detail,
+    doctor_alerts,
+)
 
 # ── Page config ───────────────────────────────────────
 st.set_page_config(
-    page_title="CGM IoT Platform",
+    page_title="GlucoWatch",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── Session state defaults ────────────────────────────
+# ── Init ──────────────────────────────────────────────
+init_auth()
+inject_global_styles()
+
+# ── Auto-refresh defaults ─────────────────────────────
 if "auto_refresh" not in st.session_state:
-    st.session_state["auto_refresh"] = True
+    st.session_state["auto_refresh"] = False
 if "refresh_interval" not in st.session_state:
     st.session_state["refresh_interval"] = 30
 
+# ── Page registry ─────────────────────────────────────
+_PUBLIC_PAGES = {
+    "landing": landing.render,
+    "login": login.render,
+    "register": register.render,
+}
+
+_PATIENT_PAGES = {
+    "patient_dashboard": patient_dashboard.render,
+    "patient_alerts": patient_alerts.render,
+}
+
+_DOCTOR_PAGES = {
+    "doctor_dashboard": doctor_dashboard.render,
+    "doctor_patient_detail": doctor_patient_detail.render,
+    "doctor_alerts": doctor_alerts.render,
+}
+
 
 def main() -> None:
-    # ── Backend connectivity check ────────────────────
-    health = api_client.check_health()
-    if health is None:
-        st.error(
-            "**Backend unreachable.** Make sure the FastAPI server is running "
-            "and the BACKEND_URL environment variable is set correctly."
-        )
-        st.stop()
+    current = st.session_state.get("current_page", "landing")
 
-    # ── Sidebar navigation ────────────────────────────
-    page = render_sidebar()
+    # ── Public pages (no sidebar) ─────────────────────
+    if not is_authenticated():
+        renderer = _PUBLIC_PAGES.get(current, landing.render)
+        renderer()
+        return
 
-    # ── Page routing ──────────────────────────────────
-    if page == "Patient":
-        patient_dashboard.render()
-    elif page == "Doctor":
-        doctor_dashboard.render()
+    # ── Authenticated pages ───────────────────────────
+    render_sidebar()
+    role = get_role()
+
+    if role == "patient":
+        renderer = _PATIENT_PAGES.get(current, patient_dashboard.render)
+    elif role == "doctor":
+        renderer = _DOCTOR_PAGES.get(current, doctor_dashboard.render)
+    else:
+        st.error("Unknown user role.")
+        return
+
+    renderer()
 
     # ── Auto-refresh ──────────────────────────────────
     if st.session_state.get("auto_refresh"):
@@ -49,5 +86,4 @@ def main() -> None:
         st.rerun()
 
 
-if __name__ == "__main__":
-    main()
+main()

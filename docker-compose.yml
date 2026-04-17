@@ -43,7 +43,7 @@ services:
       timeout: 3s
       retries: 5
 
-  # ── Edge Simulator ────────────────────────────────
+  # ── Edge Simulator (3 patients) ───────────────────
   edge:
     build:
       context: ./edge
@@ -52,10 +52,18 @@ services:
     environment:
       MQTT_BROKER_HOST: mosquitto
       MQTT_BROKER_PORT: 1883
-      EDGE_INTERVAL_SECONDS: ${EDGE_INTERVAL_SECONDS:-5}
-      EDGE_PATIENT_ID: ${EDGE_PATIENT_ID:-PAT-001}
-      EDGE_DEVICE_ID: ${EDGE_DEVICE_ID:-DEX-G6-001}
-      EDGE_CSV_PATH: ${EDGE_CSV_PATH:-data/sample.csv}
+      EDGE_INTERVAL_SECONDS: ${EDGE_INTERVAL_SECONDS:-3}
+      COL_TIMESTAMP: timestamp
+      COL_GLUCOSE: glucose_mg_dl
+      EDGE_PATIENTS_1_ID: PAT-001
+      EDGE_PATIENTS_1_DEVICE: DEX-G6-001
+      EDGE_PATIENTS_1_CSV: data/patient_001.csv
+      EDGE_PATIENTS_2_ID: PAT-002
+      EDGE_PATIENTS_2_DEVICE: DEX-G6-002
+      EDGE_PATIENTS_2_CSV: data/patient_002.csv
+      EDGE_PATIENTS_3_ID: PAT-003
+      EDGE_PATIENTS_3_DEVICE: DEX-G6-003
+      EDGE_PATIENTS_3_CSV: data/patient_003.csv
     depends_on:
       mosquitto:
         condition: service_healthy
